@@ -1,23 +1,22 @@
 from functools import wraps
 from datetime import datetime, timedelta
 from app import app, db, bcrypt, login_manager
-from app.database.models import User, Token
+from app.api import parser
+import app.database.interface as db_interface
 from app.exceptions import DatabaseError, AuthError
 from flask import jsonify, request
 import jwt
 
-EXP_TIME = 3600 # token expiry time in seconds
-
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    return db_interface.query_user(int(user_id))
 
-#TODO: Query for token as request argument
 def token_required(f):
     @wraps(f)
     def decorator(*args, **kwargs):
         try:
-            token = Token.query.get(data['token'])
+            parsed_args = parser.parse_args()
+            token = db_interface.query_token(parsed_args['key'])
             if token.is_valid():
                 pass
             else:
@@ -30,8 +29,7 @@ def token_required(f):
     return decorator
 
 def password_is_valid(username, password):
-    user = User.query.get(username)
-    
+    user = db_interface.query_user(username)    
     if user:
         if bcrypt.check_password_hash(user.password_hash, password):
             return True
@@ -39,15 +37,8 @@ def password_is_valid(username, password):
             return False
     else:
         raise DatabaseError('User does not exist: ' + username)
-
-def create_token(username):
-    user = User.query.get(username)
-
+    
+def token_is_valid(username):
+    user = db_interface.query_user(username)
     if user:
-        token = Token(user.id)
-        token_jwt = jwt.encode({'username': username, 'token': str(token.id), 'exp': datetime.utcnow() + timedelta(seconds=EXP_TIME)}, app.config['SECRET_KEY'])
-        db.session.add(token)
-        db.session.commit()
-        return token_jwt
-    else:
-        raise DatabaseError('User does not exist: ' + username)
+        pass

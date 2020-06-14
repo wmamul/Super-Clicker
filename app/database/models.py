@@ -1,8 +1,9 @@
 from datetime import datetime, timedelta
 from flask_login import UserMixin
 from app import db
-from app.users.auth import EXP_TIME
 import uuid
+
+EXP_TIME = 3600 # token expiry time in seconds
 
 class User(db.Model, UserMixin):
 
@@ -14,7 +15,7 @@ class User(db.Model, UserMixin):
                        default='../app/media/default_image.jpg')
     last_login = db.Column(db.DateTime(), unique=False, nullable=False, default=datetime.utcnow())
     password_hash = db.Column(db.String(60), nullable=False)
-    progress = db.relationship('Progress', backref='user', lazy=True)
+#    progress = db.relationship('Progress', backref='user', lazy=True)
 
     def __repr__(self):
         user = (self.username, self.email, self.image, self.id)
@@ -26,16 +27,21 @@ class User(db.Model, UserMixin):
                 ("image", self.image),
                 ("id", self.id))
         return dict(user)
+    
+    @property
+    def is_authenticated(self):
+        pass 
 
 class Token(db.Model):
     
     id = db.Column(db.Integer(), default=lambda: str(uuid.uuid4()), unique=True, primary_key=True)
-    user_id = db.Column(db.Integer(), db.ForeignKey('user.id'))
+    user_id = db.Column(db.Integer(), db.ForeignKey('user.id'), nullable=False)
     timestamp = db.Column(db.DateTime(), default=datetime.utcnow())
     expiry = db.Column(db.DateTime(), default=datetime.utcnow() + timedelta(seconds=EXP_TIME))
     
     def __init__(self, user):
-        self.user_id = user.id
+        if user:
+            self.user_id = user.id
         
     def is_valid(self):
         if self.expiry > datetime.utcnow():
