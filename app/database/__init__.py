@@ -1,1 +1,3 @@
-#TODO Create exception class
+from flask_sqlalchemy import SQLAlchemy
+
+db = SQLAlchemy()

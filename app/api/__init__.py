@@ -1,9 +1,7 @@
-from flask import make_response
-from app import app
-from flask_restx import Api, reqparse
-import jwt
+from flask_restx import Api
+from flask_restx import reqparse
 
-api = Api(app)
+api = Api()
 
 parser = reqparse.RequestParser()
 parser.add_argument('key')

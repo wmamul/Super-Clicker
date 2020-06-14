@@ -1,7 +1,11 @@
-from app import db, bcrypt
+from app.database import db
 from app.database.models import User, Token
+from app.users import bcrypt
 from app.exceptions import DatabaseError
 import uuid
+
+def hash_password(password):
+    return bcrypt.generate_password_hash(password).decode('utf-8')
 
 def query_user(username):
     user = User.query.get(username)
@@ -15,16 +19,28 @@ def create_user(data):
         new_user = User()
         new_user.username = data['username']
         new_user.email = data['email']
-        new_user.password_hash = bcrypt.generate_password_hash(data['password']).decode('utf-8')
+        new_user.password_hash = hash_password(data['password'])
         db.session.add(new_user)
         db.session.commit()
     except KeyError as e:
         raise DatabaseError('Insufficient data to create a user. Missing data: ' + str(e))
 
+def update_user(user, data):
+    try:
+        updated_user = query_user(user)
+        updated_user.username = data['username']
+        updated_user.email = data['email']
+        updated_user.image = '../../media/' + data['image']
+        updated_user.password_hash = hash_password(data['password'])
+        db.session.add(updated_user)
+        db.session.commit()
+    except KeyError as e:
+        raise DatabaseError('Insufficient data to update user info. Missing data: ' + str(e))
+
 def query_token(user_id):
     token = Token.query.get(user_id)
     if token:
-        return token.id
+        return token
     else:
         raise DatabaseError('Token does not exist.')
     
@@ -35,9 +51,8 @@ def query_token(user_id):
     user then can provide randomly created uid in the future
     to regain their progress
 '''
-def create_token(username=None):
-    if username:
-        user = query_user(username)
+def create_token(user=None):
+    if user:
         token = Token(user.id)
         db.session.add(token)
         db.session.commit()
@@ -52,3 +67,8 @@ def create_token(username=None):
         db.session.add(token)
         db.session.commit()
         return query_token(new_user.id)
+
+def delete_token(user):
+    token = query_token(user.id)
+    db.session.delete(token)
+    db.session.commit()
