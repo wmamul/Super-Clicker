@@ -4,25 +4,26 @@ from flask_restx import Resource
 from app.api import api, parser
 import app.database.interface as db_interface
 from app.users import auth
-from app.exceptions import DatabaseError
+from app.exceptions import DatabaseError, AuthError
 
 @api.route('/login')
 class Login(Resource):
     def get(self):        
         try:
             args = parser.parse_args()
-            data = request.get_json()
+            data = request.get_json() #TODO: Add guest user case
             if args['key']:
                 user = db_interface.query_user(args['key'])
                 login_user(user)
                 token = auth.encode_token(db_interface.create_token(user))
                 return make_response({'message': 'User succesfully logged in', 'JWT': token}, 200)
-            elif auth.password_is_valid(data['username'], data['password']):
+            else:
                 user = db_interface.query_user(data['username'])
-                login_user(user)
-                token = db_interface.create_token(user)
-                return make_response({'message': 'User succesfully logged in', 'JWT': token}, 200)
-        except DatabaseError as e:
+                if db_interface.check_password(user, data['password']):
+                    login_user(user)
+                    token = db_interface.create_token(user)
+                    return make_response({'message': 'User succesfully logged in', 'JWT': token}, 200)
+        except [DatabaseError, AuthError] as e:
             return make_response({'message': e.message}, 400)
 
 @api.route('/logout')

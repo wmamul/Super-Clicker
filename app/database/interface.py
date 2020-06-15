@@ -1,11 +1,15 @@
-from app.database import db
+from app.database import db, bcrypt, login_manager
 from app.database.models import User, Token
-from app.users import bcrypt
-from app.exceptions import DatabaseError
+from app.exceptions import DatabaseError, AuthError
 import uuid
 
 def hash_password(password):
     return bcrypt.generate_password_hash(password).decode('utf-8')
+
+def check_password(user, password):
+    if bcrypt.check_password_hash(user.password_hash, password):
+        return True
+    raise AuthError('Invalid password.')
 
 def query_user(username):
     user = User.query.get(username)
@@ -13,6 +17,10 @@ def query_user(username):
         return user
     else:
         raise DatabaseError('User does not exist: ' + username)
+
+@login_manager.user_loader
+def load_user(user_id):
+    return query_user(user_id)
 
 def create_user(data):
     try:
