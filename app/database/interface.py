@@ -18,8 +18,9 @@ def query_user(username):
     else:
         raise DatabaseError('User does not exist: ' + username)
 
-@login_manager.user_loader
-def load_user(user_id):
+#TODO: Rewrite to load user from request using api-key and user password
+@login_manager.request_loader
+def load_user(session):
     return query_user(user_id)
 
 def create_user(data):
