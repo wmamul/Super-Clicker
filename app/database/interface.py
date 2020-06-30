@@ -1,4 +1,4 @@
-from app.database import db, bcrypt, login_manager
+from app.database import db, bcrypt
 from app.database.models import User, Token
 from app.exceptions import DatabaseError, AuthError
 import uuid
@@ -17,11 +17,6 @@ def query_user(username):
         return user
     else:
         raise DatabaseError('User does not exist: ' + username)
-
-#TODO: Rewrite to load user from request using api-key and user password
-@login_manager.request_loader
-def load_user(session):
-    return query_user(user_id)
 
 def create_user(data):
     try:
@@ -62,17 +57,17 @@ def query_token(user_id):
 '''
 def create_token(user=None):
     if user:
-        token = Token(user.id)
+        token = Token(user)
         db.session.add(token)
         db.session.commit()
-        return query_token(user.user_id)
+        return query_token(user.id)
     else:
         random_user = { 'username': lambda: str(uuid.uuid4())[0:18],
                         'email': lambda: str(uuid.uuid4()),
                         'password': lambda: str(uuid.uuid4()) }
         create_user(random_user)
         new_user = query_user(random_user['username'])
-        token = Token(new_user.id)
+        token = Token(new_user)
         db.session.add(token)
         db.session.commit()
         return query_token(new_user.id)

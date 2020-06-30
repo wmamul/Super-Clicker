@@ -1,5 +1,4 @@
 from flask import make_response, request, jsonify
-from flask_login import login_user, logout_user, login_required, current_user
 from flask_restx import Resource
 from app.api import api, parser
 import app.database.interface as db_interface
@@ -28,7 +27,6 @@ class Login(Resource):
 
 @api.route('/logout')
 class Logout(Resource):
-    @login_required
     def get(self):
         db_interface.delete_token(current_user)
         logout_user()
@@ -45,12 +43,10 @@ class Register(Resource):
 
 @api.route('/user/<string:user_id>')        
 class Profile(Resource):
-    @login_required
     def get(self):
         user = db_interface.query_user(current_user)
         return make_response(jsonify(user.info), 200)
         
-    @login_required
     def put(self):
         try:
             data = request.get_json()

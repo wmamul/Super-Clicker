@@ -1,4 +1,6 @@
 from app import app
+from app.database import interface
+from app.exceptions import AuthError, DatabaseError
 import jwt
 
 def encode_token(token):
@@ -7,4 +9,3 @@ def encode_token(token):
 def decode_token(jwt_string):
     token = jwt.decode(jwt_string, app.config['SECRET_KEY'])
     return token['token_id']
-

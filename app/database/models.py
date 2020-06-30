@@ -1,11 +1,10 @@
 from datetime import datetime, timedelta
-from flask_login import UserMixin
 from app import db
 import uuid
 
 EXP_TIME = 3600 # token expiry time in seconds
 
-class User(db.Model, UserMixin):
+class User(db.Model):
 
     id = db.Column(db.String(36), default=lambda: str(uuid.uuid4()), unique=True, primary_key=True)
     username = db.Column(db.String(20), unique=True, nullable=False)
@@ -36,8 +35,7 @@ class Token(db.Model):
     expiry = db.Column(db.DateTime(), default=datetime.utcnow() + timedelta(seconds=EXP_TIME))
 
     def __init__(self, user):
-        if user:
-            self.user_id = user.id
+        self.user_id = user.id
 
     def is_valid(self):
         if self.expiry > datetime.utcnow():
