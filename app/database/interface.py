@@ -18,6 +18,10 @@ def query_user(username):
     else:
         raise DatabaseError('User does not exist: ' + username)
 
+@login_manager.user_loader
+def load_user(user_id):
+    return query_user(user_id)
+
 def create_user(data):
     try:
         new_user = User()
