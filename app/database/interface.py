@@ -19,15 +19,13 @@ def create_user(data: Dict):
         new_user.email = data['email']
         new_user.password_hash = data['password']
     except KeyError as e:
-        raise DatabaseError('Insufficient data to create a user.
-        Missing data: ' + str(e))
+        raise DatabaseError('Insufficient data to create a user. ' + str(e))
     try:
         db.session.add(new_user)
         db.session.commit()
     except IntegrityError as e:
         db.session.rollback()
-        raise DatabaseError('DB-API raised an IntegrityError.
-        Please check integrity of provided data. Error message: ' + str(e))
+        raise DatabaseError('DB-API raised an IntegrityError. Please check integrity of provided data. ' + str(e))
 
 def update_user(username: str, data: Dict):
     try:
@@ -37,15 +35,13 @@ def update_user(username: str, data: Dict):
         updated_user.image = '../../media/' + data['image']
         updated_user.password_hash = data['password']
     except KeyError as e:
-        raise DatabaseError('Insufficient data to update user info.
-        Missing data: ' + str(e))
+        raise DatabaseError('Insufficient data to update user info. ' + str(e))
     try:
         db.session.add(updated_user)
         db.session.commit()
     except IntegirtyError as e:
         db.session.rollback()
-        raise DatabaseError('DB-API raised an IntegrityError.
-        Please check integrity of provided data. Error message: ' + str(e))
+        raise DatabaseError('DB-API raised an IntegrityError. Please check integrity of provided data. ' + str(e))
 
 def query_token(user_id: int) -> Token:
     token = Token.query.get(user_id)
