@@ -47,6 +47,7 @@ class Register(Resource):
     def post(self):
         try:
             data = request.get_json()
+            data['password'] = auth.hash_password(data['password'])
             db_interface.create_user(data)
             return make_response({'message': 'User successfully created.'}, 200)
         except DatabaseError as e:

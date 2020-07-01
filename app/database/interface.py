@@ -2,6 +2,7 @@ from typing import Dict
 from app.database import db
 from app.database.models import User, Token
 from app.exceptions import DatabaseError, AuthError
+from sqlalchemy.exc import IntegrityError
 import uuid
 
 def query_user(username: str) -> User:
@@ -16,11 +17,17 @@ def create_user(data: Dict):
         new_user = User()
         new_user.username = data['username']
         new_user.email = data['email']
-        new_user.password_hash = hash_password(data['password'])
+        new_user.password_hash = data['password']
+    except KeyError as e:
+        raise DatabaseError('Insufficient data to create a user.
+        Missing data: ' + str(e))
+    try:
         db.session.add(new_user)
         db.session.commit()
-    except KeyError as e:
-        raise DatabaseError('Insufficient data to create a user. Missing data: ' + str(e))
+    except IntegrityError as e:
+        db.session.rollback()
+        raise DatabaseError('DB-API raised an IntegrityError.
+        Please check integrity of provided data. Error message: ' + str(e))
 
 def update_user(username: str, data: Dict):
     try:
@@ -28,13 +35,19 @@ def update_user(username: str, data: Dict):
         updated_user.username = data['username']
         updated_user.email = data['email']
         updated_user.image = '../../media/' + data['image']
-        updated_user.password_hash = hash_password(data['password'])
+        updated_user.password_hash = data['password']
+    except KeyError as e:
+        raise DatabaseError('Insufficient data to update user info.
+        Missing data: ' + str(e))
+    try:
         db.session.add(updated_user)
         db.session.commit()
-    except KeyError as e:
-        raise DatabaseError('Insufficient data to update user info. Missing data: ' + str(e))
+    except IntegirtyError as e:
+        db.session.rollback()
+        raise DatabaseError('DB-API raised an IntegrityError.
+        Please check integrity of provided data. Error message: ' + str(e))
 
-def query_token(user_id: int):
+def query_token(user_id: int) -> Token:
     token = Token.query.get(user_id)
     if token:
         return token
@@ -49,7 +62,7 @@ def query_token(user_id: int):
     to regain their progress
 '''
 
-def create_token(user=None):
+def create_token(user=None) -> Token:
     if user:
         token = Token(user)
         db.session.add(token)
