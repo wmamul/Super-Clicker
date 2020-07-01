@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from app import db
+from . import db
 import uuid
 
 EXP_TIME = 3600 # token expiry time in seconds

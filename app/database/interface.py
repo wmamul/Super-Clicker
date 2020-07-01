@@ -1,28 +1,17 @@
-from app.database import db, bcrypt
+from typing import Dict
+from app.database import db
 from app.database.models import User, Token
 from app.exceptions import DatabaseError, AuthError
 import uuid
 
-def hash_password(password):
-    return bcrypt.generate_password_hash(password).decode('utf-8')
-
-def check_password(user, password):
-    if bcrypt.check_password_hash(user.password_hash, password):
-        return True
-    raise AuthError('Invalid password.')
-
-def query_user(username):
+def query_user(username: str) -> User:
     user = User.query.get(username)
     if user:
         return user
     else:
         raise DatabaseError('User does not exist: ' + username)
 
-@login_manager.user_loader
-def load_user(user_id):
-    return query_user(user_id)
-
-def create_user(data):
+def create_user(data: Dict):
     try:
         new_user = User()
         new_user.username = data['username']
@@ -33,7 +22,7 @@ def create_user(data):
     except KeyError as e:
         raise DatabaseError('Insufficient data to create a user. Missing data: ' + str(e))
 
-def update_user(user, data):
+def update_user(username: str, data: Dict):
     try:
         updated_user = query_user(user)
         updated_user.username = data['username']
@@ -45,7 +34,7 @@ def update_user(user, data):
     except KeyError as e:
         raise DatabaseError('Insufficient data to update user info. Missing data: ' + str(e))
 
-def query_token(user_id):
+def query_token(user_id: int):
     token = Token.query.get(user_id)
     if token:
         return token
@@ -59,6 +48,7 @@ def query_token(user_id):
     user then can provide randomly created uid in the future
     to regain their progress
 '''
+
 def create_token(user=None):
     if user:
         token = Token(user)

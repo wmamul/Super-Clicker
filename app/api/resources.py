@@ -1,9 +1,19 @@
 from flask import make_response, request, jsonify
-from flask_restx import Resource
+from flask_restx import Resource, fields
 from app.api import api, parser
 import app.database.interface as db_interface
 from app.users import auth
 from app.exceptions import DatabaseError, AuthError
+
+user_fields = api.model('User', {
+    'username': fields.String(min_length=6, max_length=20),
+    'password': fields.String(description='Only used in registration endpoint', 
+                              min_length=8, max_length=20),
+    'email': fields.String(max_length=120),
+    'image': fields.String(max_length=80, desctiption='Profile picture path on the server'),
+    'last_login': fields.DateTime()
+    })
+
 
 @api.route('/login')
 class Login(Resource):
@@ -33,6 +43,7 @@ class Logout(Resource):
 
 @api.route('/user/register')
 class Register(Resource):
+    @api.marshal_with(user_fields)
     def post(self):
         try:
             data = request.get_json()
@@ -41,12 +52,15 @@ class Register(Resource):
         except DatabaseError as e:
             return make_response({'message': e.message}, 400)
 
-@api.route('/user/<string:user_id>')        
+@api.route('/user/<string:username>')
 class Profile(Resource):
-    def get(self):
-        user = db_interface.query_user(current_user)
+    @api.marshal_list_with(user_fields)
+    def get(self, username):
+        user = db_interface.query_user(username)
+#        user = db_interface.query_user(current_user)
         return make_response(jsonify(user.info), 200)
         
+    @api.marshal_with(user_fields)
     def put(self):
         try:
             data = request.get_json()
