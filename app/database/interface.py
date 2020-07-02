@@ -1,30 +1,32 @@
 from typing import Dict
+from . import session_scope
 from app.database.models import User, Token
 from app.exceptions import DatabaseError, AuthError
-from sqlalchemy.exc import IntegrityError
 import uuid
 
 def query_user(username: str) -> User:
-    user = User.query.get(username)
-    if user:
-        return user
-    else:
-        raise DatabaseError('User does not exist: ' + username)
+    with session_scope() as session:
+        user = session.query(User).filter_by(username=username).first()
+        if user:
+            return user
+        else:
+            raise DatabaseError('User does not exist: ' + username)
 
 def create_user(data: Dict):
-    try:
-        new_user = User()
-        new_user.username = data['username']
-        new_user.email = data['email']
-        new_user.password_hash = data['password']
-    except KeyError as e:
-        raise DatabaseError('Insufficient data to create a user. ' + str(e))
-    try:
-        session.add(new_user)
-        session.commit()
-    except IntegrityError as e:
-        session.rollback()
-        raise DatabaseError('DB-API raised an IntegrityError. Please check integrity of provided data. ' + str(e))
+    with session_scope() as session:
+        try:
+            new_user = User()
+            new_user.username = data['username']
+            new_user.email = data['email']
+            new_user.password_hash = data['password']
+        except KeyError as e:
+            raise DatabaseError('Insufficient data to create a user. ' + str(e))
+        try:
+            session.add(new_user)
+            session.commit()
+        except IntegrityError as e:
+            session.rollback()
+            raise DatabaseError('DB-API raised an IntegrityError. Please check integrity of provided data. ' + str(e))
 
 def update_user(username: str, data: Dict):
     try:
@@ -48,7 +50,7 @@ def query_token(user_id: int) -> Token:
         return token
     else:
         raise DatabaseError('Token does not exist.')
-    
+
 '''
     if user exists, return jwt for auth
     if user does not exist, create a guest user to save progress
@@ -65,8 +67,8 @@ def create_token(user=None) -> Token:
         return query_token(user.id)
     else:
         random_user = { 'username': lambda: str(uuid.uuid4())[0:18],
-                        'email': lambda: str(uuid.uuid4()),
-                        'password': lambda: str(uuid.uuid4()) }
+                'email': lambda: str(uuid.uuid4()),
+                'password': lambda: str(uuid.uuid4()) }
         create_user(random_user)
         new_user = query_user(random_user['username'])
         token = Token(new_user)
@@ -77,4 +79,4 @@ def create_token(user=None) -> Token:
 def delete_token(user):
     token = query_token(user.id)
     session.delete(token)
-    session.commit()
+        session.commit()
