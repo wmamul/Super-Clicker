@@ -7,8 +7,8 @@ from app.exceptions import DatabaseError, AuthError
 
 user_fields = api.model('User', {
     'username': fields.String(min_length=6, max_length=20),
-    'password': fields.String(description='Only used in registration endpoint', 
-                              min_length=8, max_length=20),
+    'password': fields.String(description='Only used in registration endpoint',
+        min_length=8, max_length=20),
     'email': fields.String(max_length=120),
     'image': fields.String(max_length=80, desctiption='Profile picture path on the server'),
     'last_login': fields.DateTime()
@@ -25,13 +25,15 @@ class Login(Resource):
                 user = db_interface.query_user(args['key'])
                 login_user(user)
                 token = auth.encode_token(db_interface.create_token(user))
-                return make_response({'message': 'User succesfully logged in', 'JWT': token}, 200)
+                return make_response({'message': 'User succesfully logged in',
+                    'JWT': token}, 200)
             else:
                 user = db_interface.query_user(data['username'])
                 if db_interface.check_password(user, data['password']):
                     login_user(user)
                     token = db_interface.create_token(user)
-                    return make_response({'message': 'User succesfully logged in', 'JWT': token}, 200)
+                    return make_response({'message': 'User succesfully logged
+                        in', 'JWT': token}, 200)
         except [DatabaseError, AuthError] as e:
             return make_response({'message': e.message}, 400)
 
@@ -49,7 +51,8 @@ class Register(Resource):
             data = request.get_json()
             data['password'] = auth.hash_password(data['password'])
             db_interface.create_user(data)
-            return make_response({'message': 'User successfully created.'}, 200)
+            return make_response({'message': 'User successfully created.'},
+                    200)
         except DatabaseError as e:
             return make_response({'message': e.message}, 400)
 
@@ -66,6 +69,7 @@ class Profile(Resource):
         try:
             data = request.get_json()
             db_interface.update_user(current_user, data)
-            return make_response({'message': 'User data sucessfully updated.'}, 200)
+            return make_response({'message': 'User data sucessfully updated.'},
+                    200)
         except DatabaseError as e:
             return make_response({'message': e.message}, 400)

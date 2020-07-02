@@ -1,5 +1,4 @@
 from typing import Dict
-from app.database import db
 from app.database.models import User, Token
 from app.exceptions import DatabaseError, AuthError
 from sqlalchemy.exc import IntegrityError
@@ -19,15 +18,13 @@ def create_user(data: Dict):
         new_user.email = data['email']
         new_user.password_hash = data['password']
     except KeyError as e:
-        raise DatabaseError('Insufficient data to create a user.
-        Missing data: ' + str(e))
+        raise DatabaseError('Insufficient data to create a user. ' + str(e))
     try:
-        db.session.add(new_user)
-        db.session.commit()
+        session.add(new_user)
+        session.commit()
     except IntegrityError as e:
-        db.session.rollback()
-        raise DatabaseError('DB-API raised an IntegrityError.
-        Please check integrity of provided data. Error message: ' + str(e))
+        session.rollback()
+        raise DatabaseError('DB-API raised an IntegrityError. Please check integrity of provided data. ' + str(e))
 
 def update_user(username: str, data: Dict):
     try:
@@ -37,15 +34,13 @@ def update_user(username: str, data: Dict):
         updated_user.image = '../../media/' + data['image']
         updated_user.password_hash = data['password']
     except KeyError as e:
-        raise DatabaseError('Insufficient data to update user info.
-        Missing data: ' + str(e))
+        raise DatabaseError('Insufficient data to update user info. ' + str(e))
     try:
-        db.session.add(updated_user)
-        db.session.commit()
+        session.add(updated_user)
+        session.commit()
     except IntegirtyError as e:
-        db.session.rollback()
-        raise DatabaseError('DB-API raised an IntegrityError.
-        Please check integrity of provided data. Error message: ' + str(e))
+        session.rollback()
+        raise DatabaseError('DB-API raised an IntegrityError. Please check integrity of provided data. ' + str(e))
 
 def query_token(user_id: int) -> Token:
     token = Token.query.get(user_id)
@@ -65,8 +60,8 @@ def query_token(user_id: int) -> Token:
 def create_token(user=None) -> Token:
     if user:
         token = Token(user)
-        db.session.add(token)
-        db.session.commit()
+        session.add(token)
+        session.commit()
         return query_token(user.id)
     else:
         random_user = { 'username': lambda: str(uuid.uuid4())[0:18],
@@ -75,11 +70,11 @@ def create_token(user=None) -> Token:
         create_user(random_user)
         new_user = query_user(random_user['username'])
         token = Token(new_user)
-        db.session.add(token)
-        db.session.commit()
+        session.add(token)
+        session.commit()
         return query_token(new_user.id)
 
 def delete_token(user):
     token = query_token(user.id)
-    db.session.delete(token)
-    db.session.commit()
+    session.delete(token)
+    session.commit()

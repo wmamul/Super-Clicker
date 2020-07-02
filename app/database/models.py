@@ -1,20 +1,28 @@
 from datetime import datetime, timedelta
-from . import db
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Sequence
+from flask_login import UserMixin
 import uuid
 
 EXP_TIME = 3600 # token expiry time in seconds
 
-class User(db.Model):
+Base = declarative_base()
 
-    id = db.Column(db.String(36), default=lambda: str(uuid.uuid4()), unique=True, primary_key=True)
-    username = db.Column(db.String(20), unique=True, nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    image = db.Column(db.String(100),
-                       nullable=False,
-                       default='../../media/default_image.jpg')
-    last_login = db.Column(db.DateTime(), unique=False, nullable=False, default=datetime.utcnow())
-    password_hash = db.Column(db.String(60), nullable=False)
-#    progress = db.relationship('Progress', backref='user', lazy=True)
+class User(Base, UserMixin):
+
+    __tablename__ = 'users'
+
+    id = Column(String(36), Sequence('user_id_seq'), default=lambda:
+            str(uuid.uuid4()), unique=True, primary_key=True)
+    username = Column(String(20), unique=True, nullable=False)
+    email = Column(String(120), unique=True, nullable=False)
+    image = Column(String(100), nullable=False,
+            default='../../media/default_image.jpg')
+    last_login = Column(DateTime, unique=False, nullable=False,
+            default=datetime.utcnow())
+    password_hash = Column(String(60), nullable=False)
+#    token = relationship('Token', backref='user', lazy=True)
+#    progress = relationship('Progress', backref='user', lazy=True)
 
     def __repr__(self):
         user = (self.username, self.email, self.image, self.id)
@@ -27,12 +35,16 @@ class User(db.Model):
                 ("id", self.id))
         return dict(user)
 
-class Token(db.Model):
+class Token(Base):
 
-    id = db.Column(db.Integer(), default=lambda: str(uuid.uuid4()), unique=True, primary_key=True)
-    user_id = db.Column(db.Integer(), db.ForeignKey('user.id'), nullable=False)
-    timestamp = db.Column(db.DateTime(), default=datetime.utcnow())
-    expiry = db.Column(db.DateTime(), default=datetime.utcnow() + timedelta(seconds=EXP_TIME))
+    __tablename__ = 'tokens'
+
+    id = Column(String(36), Sequence('token_id_seq'), default=lambda:
+            str(uuid.uuid4()), unique=True, primary_key=True)
+    user_id = Column(String(36), ForeignKey('user.id'), nullable=False)
+    timestamp = Column(DateTime, default=datetime.utcnow())
+    expiry = Column(DateTime, default=datetime.utcnow() +
+            timedelta(seconds=EXP_TIME))
 
     def __init__(self, user):
         self.user_id = user.id
@@ -46,8 +58,9 @@ class Token(db.Model):
         self.expiry = datetime.utcnow() + timedelta(seconds=EXP_TIME)
 '''
 #TODO: Define progress table
-class Progress(db.Model):
+class Progress(Base):
 
-    id = db.Column(db.Integer(), default=lambda: str(uuid.uuid4()), unique=True, primary_key=True)
-    user_id = db.Column(db.Integer(), db.ForeignKey('user.id'), nullable=False)
+    id = Column(String(36), default=lambda: str(uuid.uuid4()), unique=True,
+    primary_key=True)
+    user_id = Column(String(36), ForeignKey('user.id'), nullable=False)
 '''
