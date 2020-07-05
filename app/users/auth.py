@@ -25,7 +25,7 @@ def load_user(request):
             username = user[0]
             with session_scope() as session:
                 user = db_interface.query_user(username, session)
-                if bcrypt.check_password_hash(user.password_hash, password)
+                if bcrypt.check_password_hash(user.password_hash, password):
                     return user
                 else:
                     raise AuthError('Incorrect user:password combination')

@@ -55,7 +55,7 @@ class Token(Base):
             return True
         return False
 
-    def refresh(self) -> None:
+    def refresh(self):
         self.expiry = datetime.utcnow() + timedelta(seconds=EXP_TIME)
 '''
 #TODO: Define progress table
