@@ -26,25 +26,9 @@ user_register = api.model("User registration requirements", {
 class Login(Resource):
 
     def get(self): 
-        try:
-            args = parser.parse_args()
-            data = request.get_json() #TODO: Add guest user case
-            if args['key']:
-                token_string = auth.decode_token(args['key'])
-                with session_scope() as session:
-                    token = db_interface.query_token(token_string, session)
-                    user = db_interface.query_user(token.user_ref, session)
-                    login_user(user)
-                return make_response({"message": "User succesfully logged in",
-                    "JWT": token}, 200)
-            else:
-                if auth.check_password(user.username, data['password']):
-                    login_user(user)
-                    create_token(user)
-                    return make_response({"message": "User succesfully logged in",
-                         "JWT": token}, 200)
-        except [DatabaseError, AuthError] as e:
-            return make_response({"message": e.message}, 400)
+        login_user(user)
+        return make_response({"message": "User succesfully logged in", "JWT":
+            token}, 200)
 
 @api.route('/logout')
 class Logout(Resource):
