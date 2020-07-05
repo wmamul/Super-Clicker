@@ -33,7 +33,7 @@ class User(Base, UserMixin):
         user = (('username', self.username),
                 ('email', self.email),
                 ('image', self.image),
-                ('id', self.id))
+                ('last_login', self.last_login))
         return dict(user)
 
 class Token(Base):
@@ -42,13 +42,13 @@ class Token(Base):
 
     id = Column(String(36), Sequence('token_id_seq'), default=lambda:
          str(uuid.uuid4()), unique=True, primary_key=True)
-    user_id = Column(String(36), ForeignKey('user.id'), nullable=False)
+    user_ref = Column(String(20), ForeignKey('users.username'), nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow())
     expiry = Column(DateTime, default=datetime.utcnow() +
              timedelta(seconds=EXP_TIME))
 
     def __init__(self, user: User):
-        self.user_id = user.id
+        self.user_ref = user.username
 
     def is_valid(self) -> bool:
         if self.expiry > datetime.utcnow():

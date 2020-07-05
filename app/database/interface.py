@@ -31,8 +31,8 @@ def update_user(username: str, data: Dict, session: Session):
     except KeyError as e:
         raise SessionError('Insufficient data to update user info. ' + str(e)) 
 
-def query_token(user: User, session: Session) -> Token:
-    token = session.query(Token).filter_by(user_id=user.id).first()
+def query_token(token_string: str, session: Session) -> Token:
+    token = session.query(Token).filter_by(id=token_string).first()
     if token:
         return token
     else:

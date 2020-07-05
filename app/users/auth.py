@@ -1,12 +1,15 @@
 from . import bcrypt, login_manager
 from app import app
-from app.database import interface
+from app.database import session_scope, interface as db_interface
 from app.exceptions import AuthError, DatabaseError
-import jwt
 import base64
 
 def hash_password(password: str) -> str:
-    return bcrypt.generate_password_hash(password).decode('utf-8')
+    try:
+        hash = bcrypt.generate_password_hash(password).decode('utf-8')
+        return hash
+    except TypeError:
+        raise AuthError('Password must be a utf-8 valid string')
 
 def check_password(username: str, password: str) -> bool:
     user = interface.query_user(username)
