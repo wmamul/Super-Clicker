@@ -12,8 +12,11 @@ def session_scope():
     try:
         yield session
         session.commit()
-    except:
+    except DatabaseError as e:
         session.rollback()
-        raise DatabaseError('Commiting session raised an exception')
+        print (e.message)
+    except SessionError as e:
+        session.rollback()
+        print (e.message)
     finally:
         session.close()

@@ -32,8 +32,8 @@ class Login(Resource):
                 if db_interface.check_password(user, data['password']):
                     login_user(user)
                     token = db_interface.create_token(user)
-                    return make_response({'message': 'User succesfully logged
-                        in', 'JWT': token}, 200)
+                    return make_response({'message': 'User succesfully logged in',
+                         'JWT': token}, 200)
         except [DatabaseError, AuthError] as e:
             return make_response({'message': e.message}, 400)
 

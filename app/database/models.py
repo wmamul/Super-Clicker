@@ -1,7 +1,7 @@
 from typing import Dict
 from datetime import datetime, timedelta
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import Column, Integer, String, DateTime, ForeignKey, Sequence
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Sequence
 from flask_login import UserMixin
 import uuid
 
