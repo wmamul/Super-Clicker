@@ -31,12 +31,12 @@ def update_user(username: str, data: Dict, session: Session):
     except KeyError as e:
         raise SessionError('Insufficient data to update user info. ' + str(e)) 
 
-def query_token(user: User, session: Session) -> Token:
-    token = session.query(Token).filter_by(user_ref=user.username).first()
-    if token and token.is_valid():
+def query_token(token_string: str, session: Session) -> Token:
+    token = session.query(Token).filter_by(id=token_string).first()
+    if token: 
         return token
     else:
-        raise DatabaseError('Token does not exist or expired.')
+        raise DatabaseError('Token does not exist.')
 
 def create_token(session: Session, user: Optional[User] = None): 
     if user:
