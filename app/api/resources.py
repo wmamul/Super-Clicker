@@ -32,22 +32,17 @@ class Login(Resource):
     @api.response(200, 'Returns login token', model=login_token)
     @api.response(401, 'Returns detailed error message', model=message_model)
     def get(self): 
-        auth = request.headers.get('Authorization')
-        if auth:
-            auth = auth.replace('Basic ', '', 1)
-            try:
-                auth = base64.b64decode(auth).decode('utf-8')
-                user = auth.split(':')
-                password = user[1]
-                username = user[0]
+        authorization = request.headers.get('Authorization')
+        try:
+            if authorization:
+                username, password = auth.decode_basic(authorization)
                 with session_scope() as session:
                     user = db_interface.query_user(username, session)
-                    if bcrypt.check_password_hash(user.password_hash, password):
-                        login_user(user)
-                        create_token(session, user)
-#                        return marshal(
-            except:
-                pass
+                    if auth.verify_password(user.password_hash, password):
+                        token = create_token(session, user)
+                        return marshal(token.id, login_token), 200
+        except AuthError as e:
+            return marshal(e, message_model), 401
 
 @api.route('/logout')
 class Logout(Resource):

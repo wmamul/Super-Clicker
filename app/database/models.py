@@ -2,14 +2,13 @@ from typing import Dict
 from datetime import datetime, timedelta
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Sequence
-from flask_login import UserMixin
 import uuid
 
 EXP_TIME = 3600 # token expiry time in seconds
 
 Base = declarative_base()
 
-class User(Base, UserMixin):
+class User(Base):
 
     __tablename__ = 'users'
 

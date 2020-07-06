@@ -43,6 +43,7 @@ def create_token(session: Session, user: Optional[User] = None):
         query_user(user, session)
         token = Token(user)
         session.add(token)
+        return token
     else:
         dummy_user = { 'username': lambda: str(uuid.uuid4())[0:18],
                 'email': lambda: str(uuid.uuid4()),
@@ -51,6 +52,7 @@ def create_token(session: Session, user: Optional[User] = None):
         user = query_user(dummy_user['username'], session)
         token = Token(user)
         session.add(token)
+        return token
 
 def refresh_token(user: User, session: Session):
     token = session.query(Token).filter_by(user_ref=user.username).first()

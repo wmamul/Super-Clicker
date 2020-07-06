@@ -9,5 +9,4 @@ app.config['SECRET_KEY'] = '3Ri5/uVHnSzpIg0Zn2cSDuPkwDp9skUy1RClPzevYS8='
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite3'
 
 api.api.init_app(app)
-users.login_manager.init_app(app)
 users.bcrypt.init_app(app)
