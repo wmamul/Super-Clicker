@@ -1,7 +1,7 @@
 from contextlib import contextmanager
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app.exceptions import DatabaseError, SessionError
+from app.exceptions import SessionError, AuthError
 
 engine = create_engine('sqlite:///app/database/db.sqlite3', echo=True)
 Session = sessionmaker(bind=engine)
@@ -12,11 +12,11 @@ def session_scope():
     try:
         yield session
         session.commit()
-    except DatabaseError as e:
-        session.rollback()
-        return e
     except SessionError as e:
         session.rollback()
-        return e
+        raise e
+    except AuthError as e:
+        session.rollback()
+        raise e
     finally:
         session.close()

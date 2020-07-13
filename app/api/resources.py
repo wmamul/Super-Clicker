@@ -1,71 +1,89 @@
-from flask import request
+from flask import request, jsonify
 from flask_restx import Resource, marshal
 from app.api import api, models
 from app.database import session_scope, interface as db_interface
 from app.users import auth
-from app.exceptions import SessionError, AuthError, DatabaseError
+import app.exceptions as exc
 
 @api.route('/login')
 class Login(Resource):
 
-    @api.response(200, 'Returns login token', model=models.token)
-    @api.response(401, 'Returns detailed error message', model=models.message)
+    @api.response(200, 'Authentication successful.', model=models.token)
+    @api.response(401, 'Authentication failed.', model=models.message)
+    @api.param('Authorization',
+            description="'Basic username:password' base64 encoded or 'Token token'.",
+            _in='header')
     def get(self): 
         
-        authorization = request.headers.get('Authorization')
-        if authorization:
-            try:
-                username, password = auth.decode_basic(authorization)
-            except AuthError as e:
-                return marshal(e, models.message), 401
-            with session_scope() as session:
-                try:
-                    user = db_interface.query_user(username, session)
-                    if auth.verify_password(user.password_hash, password):
-                        token = create_token(session, user)
-                        return marshal(token.id, models.token), 200
-                except [DatabaseError, AuthError] as e:
-                    return marshal(e, models.message), 401
+        try:
+            auth_header = request.headers.get('Authorization')
+            token = auth.login(auth_header)
+            return marshal(token, models.token), 200
+        except (exc.SessionError, exc.AuthError) as e:
+            return marshal(e.message(), models.message), 401
 
 @api.route('/logout')
 class Logout(Resource):
 
+    @api.response(200, 'User successfully logged out.')
+    @api.response(401, 'Authentication failed.', model=models.message)
+    @api.param('Authorization', description="Token + user's token", _in='header')
+    @auth.token_required
     def get(self):
-        db_interface.delete_token(current_user)
-        logout_user()
+
+        try:
+            auth_header = request.headers.get('Authorization')
+            auth.logout(auth_header)
+            pass
+        except (exc.SessionError, exc.AuthError) as e:
+            return marshal(e.message(), models.message), 401
 
 @api.route('/user/register')
 class Register(Resource):
 
-    @api.response(400, 'Returns detailed error message', model=models.message)
+    @api.response(200, 'User succesfully created.')
+    @api.response(400, 'Bad Request.', model=models.message)
+    @api.expect(models.user_register, validate=True)
     def post(self):
 
         try:
             data = request.get_json()
-            data['password'] = auth.hash_password(data['password'])
-            with session_scope() as session:
-                db_interface.create_user(data, session)
-            return 201
-        except SessionError as e:
-            return marshal(e, models.message), 400
+            if data:
+                data['password'] = auth.hash_password(data['password'])
+                with session_scope() as session:
+                    db_interface.create_user(data, session)
+                    pass
+            else:
+                raise exc.SessionError('No JSON data provided')
+        except exc.SessionError as e:
+            return marshal(e.message(), models.message), 400
 
 @api.route('/user/<string:username>')
+@api.param('username',
+           'User identifier for profile query. Must be authorized and provide login token in request header.')
 class Profile(Resource):
 
-    @api.response(200, 'Returns user model', model=models.user)
-    @api.response(404, 'Returns detailed error message', model=models.message)
+    @api.response(200, 'Provides user model.', model=models.user_info)
+    @api.response(404, 'User not found.', model=models.message)
+    @api.param('Authorization', description="Token + user's token.", _in='header')
     @auth.token_required
     def get(self, username):
 
         with session_scope() as session:
             try:
                 user = db_interface.query_user(username, session)
-                return marshal(user.info(), models.user), 200
-            except DatabaseError as e:
-                return marshal(e, models.message), 404
+                return marshal(user.info(), models.user_info), 200
+            except exc.SessionError as e:
+                return marshal(e.message(), models.message), 404
     
-    @api.response(400, 'Returns detailed error message', model=models.message)
-    def put(self):
+    @api.response(200, 'User profile updated.')
+    @api.response(400, 'Bad Request.', model=models.message)
+    @api.param("username",
+               "User identifier to update authenticated user's profile info.")
+    @api.expect(models.user_update, validate=True)
+    @api.param('Authorization', description="User's login token.", _in='body')
+    @auth.token_required
+    def put(self, user):
 
         try:
             data = request.get_json()
@@ -74,5 +92,5 @@ class Profile(Resource):
             with session_scope() as session:
                 db_interface.update_user(current_user, data)
             return 200
-        except SessionError as e:
-            return marshal(e, models.message), 400
+        except exc.SessionError as e:
+            return marshal(e.message(), models.message), 400
