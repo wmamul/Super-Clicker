@@ -44,7 +44,8 @@ class User(Base):
                 ('email', self.email),
                 ('image', self.image),
                 ('password', self.password_hash),
-                ('last_login', self.last_login))
+                ('last_login', self.last_login),
+                ('token', self.token))
         return dict(user)
 
 class Token(Base):
@@ -57,6 +58,9 @@ class Token(Base):
              timedelta(seconds=EXP_TIME)))
     user_ref = relationship('User', backref=backref('tokens',
         cascade='all, delete-orphan', single_parent=True), lazy='joined', uselist=False)
+
+    def __init__(self, user: User):
+        self.user_ref = user.id
 
     def __str__(self) -> str:
         return self.id
