@@ -67,7 +67,6 @@ class Profile(Resource):
     @api.response(200, 'Provides user model.', model=models.user_info)
     @api.response(404, 'User not found.', model=models.message)
     @api.param('Authorization', description="Token + user's token.", _in='header')
-    @auth.token_required
     def get(self, username):
 
         with session_scope() as session:
@@ -81,10 +80,10 @@ class Profile(Resource):
     
     @api.response(200, 'User profile updated.')
     @api.response(400, 'Bad Request.', model=models.message)
-    @api.param("username",
+    @api.param('username',
                "User identifier to update authenticated user's profile info.")
+    @api.param('Authorization', description="Token + user's token.", _in='header')
     @api.expect(models.user_update, validate=True)
-    @api.param('Authorization', description="User's login token.", _in='body')
     @auth.token_required
     def put(self, username):
 
@@ -96,7 +95,6 @@ class Profile(Resource):
                 db_interface = DAO(session)
                 db_interface.query(username)
                 db_interface.update_user(data)
-            return 200
 
         except exc.SessionError as e:
             return marshal(e.message(), models.message), 400
