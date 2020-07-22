@@ -14,7 +14,7 @@ class DAO:
 
     def query(self, query: str):
         user = self.session.query(User).filter_by(username=query).first()
-        token = session.query(Token).filter(Token.id == query).first()
+        token = self.session.query(Token).filter(Token.id == query).first()
         if user:
             self.data = user
         elif token:
@@ -22,7 +22,7 @@ class DAO:
         else:
             raise SessionError('Query does not match any database entry: ' + query)
     
-    def update(self, updated_data: Dict):
+    def update_user(self, updated_data: Dict):
         if isinstance(self.data, User):
             try:
                 self.data.username = updated_data['username']
@@ -32,16 +32,12 @@ class DAO:
             except KeyError as e:
                 raise SessionError('Insufficient data to update user info. ' + str(e)) 
     
-    def new(self, object_type: str = None, credentials: Optional[Dict] = None):
-        if object_type == 'user':
-            try:
-                self.data = User(credentials)
-                self.session.add(self.data)
-            except KeyError as e:
-                raise SessionError('Insufficient data to create a user. ' + str(e))
-        elif object_type == 'token':
-            self.data = Token()
+    def new_user(self, credentials: Dict):
+        try:
+            self.data = User(credentials)
             self.session.add(self.data)
+        except KeyError as e:
+            raise SessionError('Insufficient data to create a user. ' + str(e))
         
     def delete(self):
         if self.data:
@@ -70,6 +66,6 @@ class DAO:
             self.session.commit()
             self.data.token = token.id
         elif isinstance(self.data, User) and self.data.token:
-            raise SessionError('User already logged in.')
+            raise SessionError('User already logged in. Login using Token to refresh it.')
         else:
             raise SessionError('Queried object is not an instance of User object.')

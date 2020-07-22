@@ -60,7 +60,7 @@ class Token(Base):
         cascade='all, delete-orphan', single_parent=True), lazy='joined', uselist=False)
 
     def __init__(self, user: User):
-        self.user_ref = user.id
+        self.user_ref = user
 
     def __str__(self) -> str:
         return self.id

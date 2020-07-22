@@ -1,7 +1,8 @@
 from flask import request, jsonify
 from flask_restx import Resource, marshal
 from app.api import api, models
-from app.database import session_scope, interface as db_interface
+from app.database import session_scope
+from app.database.interface import DAO
 from app.users import auth
 import app.exceptions as exc
 
@@ -51,8 +52,8 @@ class Register(Resource):
             if data:
                 data['password'] = auth.hash_password(data['password'])
                 with session_scope() as session:
-                    db_interface.create_user(data, session)
-                    pass
+                    db_interface = DAO(session)
+                    db_interface.new_user(data)
             else:
                 raise exc.SessionError('No JSON data provided')
         except exc.SessionError as e:
@@ -71,8 +72,10 @@ class Profile(Resource):
 
         with session_scope() as session:
             try:
-                user = db_interface.query_user(username, session)
-                return marshal(user.info(), models.user_info), 200
+                db_interface = DAO(session)
+                db_interface.query(username)
+                user_info = db_interface.user
+                return marshal(user_info, models.user_info), 200
             except exc.SessionError as e:
                 return marshal(e.message(), models.message), 404
     
@@ -83,14 +86,17 @@ class Profile(Resource):
     @api.expect(models.user_update, validate=True)
     @api.param('Authorization', description="User's login token.", _in='body')
     @auth.token_required
-    def put(self, user):
+    def put(self, username):
 
         try:
             data = request.get_json()
             if 'password' in data:
                 data['password'] = auth.hash_password(data['password'])
             with session_scope() as session:
-                db_interface.update_user(current_user, data)
+                db_interface = DAO(session)
+                db_interface.query(username)
+                db_interface.update_user(data)
             return 200
+
         except exc.SessionError as e:
             return marshal(e.message(), models.message), 400
