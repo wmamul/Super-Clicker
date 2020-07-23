@@ -1,4 +1,5 @@
 import base64
+from datetime import datetime
 from functools import wraps
 from typing import Tuple, Dict
 from flask import request
@@ -8,13 +9,14 @@ from app.api import models
 import app.exceptions as exc
 from app.database import session_scope
 from app.database.interface import DAO
+import pdb
 
 def token_required(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
         try:
             token = _get_token(request.headers.get('Authorization'))
-            if _validate_token(token):
+            if _verify_token(token):
                 return f(*args, **kwargs)
             else:
                 raise exc.AuthError('Token expired, login again to refresh.')
@@ -51,18 +53,21 @@ def _get_token(auth: str) -> str:
     except (TypeError,  AttributeError):
         raise exc.AuthError('Invalid Authorization header.')
 
-def _validate_token(token_string: str) -> bool:
+def _verify_token(token_string: str) -> bool:
     with session_scope() as session:
         try:
             db_interface = DAO(session)
             db_interface.query(token_string)
-            if db_interface.data.is_valid():
+            token = db_interface.token
+            if token['exp'] > datetime.utcnow():
                 return True
+
             else: 
-                db_interface.delete()
+                del db_interface.token
                 return False
-        except exc.SessionError as e:
-            raise exc.AuthError(str(e))
+
+        except exc.SessionError:
+            raise exc.AuthError('Token invalid or expired.')
 
 def login(header: str) -> Dict:
     try:
@@ -75,8 +80,6 @@ def login(header: str) -> Dict:
                 user_data = db_interface.user
                 if _verify_password(user_data['password'], password):
                     db_interface.assign_token()
-                    token = db_interface.data.token
-                    db_interface.query(token)
                     return db_interface.token
 
         elif 'Token' in header:
@@ -84,7 +87,7 @@ def login(header: str) -> Dict:
             with session_scope() as session:
                 db_interface = DAO(session)
                 db_interface.query(token_str)
-                db_interface.data.refresh()
+                db_interface.refresh_token()
                 return db_interface.token
 
         else:
@@ -100,8 +103,7 @@ def logout(header: str) -> None:
         with session_scope() as session:
             db_interface = DAO(session)
             db_interface.query(token_str)
-            db_interface.delete()
-            pass
+            del db_interface.token
 
     except (exc.AuthError, exc.SessionError) as e:
         raise e

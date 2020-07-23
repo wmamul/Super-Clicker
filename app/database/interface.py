@@ -6,66 +6,137 @@ from app.exceptions import SessionError
 
 class DAO:
 
-    data = None
     session = None
 
     def __init__(self, session: Session):
         self.session = session
+        _user = None
+        _token = None
+        _progress = None
 
     def query(self, query: str):
+        """
+        Method queries database by username or login token and places
+        associated data inside the object.
+        """
+
         user = self.session.query(User).filter_by(username=query).first()
-        token = self.session.query(Token).filter(Token.id == query).first()
+        token = self.session.query(Token).filter_by(id=query).first()
         if user:
-            self.data = user
+            self.user = user
+            self.token = self.session.query(Token).filter_by( \
+                    user_ref=user).first()
+
         elif token:
-            self.data = token
+            self.user = token.user_ref
+            self.token = token
+
         else:
-            raise SessionError('Query does not match any database entry: ' + query)
-    
+            raise SessionError('Query does not match any database entry: ' \
+                    + query)
+
     def update_user(self, updated_data: Dict):
-        if isinstance(self.data, User):
+        """
+        Update user entry in database with provided updated_data.
+        """
+
+        if isinstance(self.user, User):
             try:
-                self.data.username = updated_data['username']
-                self.data.email = updated_data['email']
-                self.data.image = '../../media/' + updated_data['image']
-                self.data.password_hash = udpated_data['password']
+                self.user.username = updated_user['username']
+                self.user.email = updated_data['email']
+                self.user.image = '../../media/' + updated_data['image']
+                self.user.password_hash = udpated_data['password']
+
             except KeyError as e:
-                raise SessionError('Insufficient data to update user info. ' + str(e)) 
-    
+                raise SessionError('Insufficient data to update user info. ' \
+                        + str(e)) 
+
     def new_user(self, credentials: Dict):
+        """
+        Create new user database entry.
+        """
+
         try:
-            self.data = User(credentials)
-            self.session.add(self.data)
+            self.user = User(credentials)
+            self.session.add(self.user)
+
         except KeyError as e:
             raise SessionError('Insufficient data to create a user. ' + str(e))
-        
-    def delete(self):
-        if self.data:
-            self.session.delete(self.data)
+
+
+    @property
+    def token(self):
+        if self._token and isinstance(self._token, Token):
+            return self._token.info()
+
+        return None
+
+    @token.setter
+    def token(self, token: Token):
+        if isinstance(token, Token):
+            self._token = token
+            self._user.token = token.id
+        else:
+            self._token = None
+
+    @token.deleter
+    def token(self):
+        if self.user and self.token:
+            self.session.delete(self._token)
+            del self._token
+            del self._user.token
+
         else:
             raise SessionError('Nothing queried.')
 
     @property
-    def token(self):
-        if isinstance(self.data, Token):
-            return self.data.info()
-        else:
-            return None
-
-    @property
     def user(self):
-        if isinstance(self.data, User):
-            return self.data.info()
+        if self._user and isinstance(self._user, User):
+            return self._user.info()
+
+        return None
+
+    @user.setter
+    def user(self, user: User):
+        if isinstance(user, User):
+            self._user = user
         else:
-            return None
+            self._user = None
+
+    @user.deleter
+    def user(self):
+        if isinstance(self._user, User):
+            self.session.delete(self._user)
+            del self._token
+            del self._user
 
     def assign_token(self):
-        if isinstance(self.data, User) and not self.data.token:
-            token = Token(self.data)
-            self.session.add(token)
+        """
+        Create new login token and assign it to a user's account.
+        """
+
+        if self.user and not self.token:
+            self.token = Token(self._user)
+            self.session.add(self._token)
             self.session.commit()
-            self.data.token = token.id
-        elif isinstance(self.data, User) and self.data.token:
-            raise SessionError('User already logged in. Login using Token to refresh it.')
+            self._user.token = self._token.id
+            self._user.record_login()
+
+        elif self.user and self.token:
+            del self.token
+            self.assign_token()
+
         else:
-            raise SessionError('Queried object is not an instance of User object.')
+            raise SessionError('Nothing queried.')
+
+    def refresh_token(self):
+        """
+        Refresh user's login token.
+        """
+
+        if self.user and self.token and self._token.is_valid():
+            self._token.refresh()
+
+        else:
+            raise SessionError('User does not have a token assigned or \
+                    token expired.')

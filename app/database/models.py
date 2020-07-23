@@ -36,8 +36,12 @@ class User(Base):
         self.password_hash = data['password']
 
     def __repr__(self) -> str:
-        return '<User(username=%s, email=%s, image=%s, last_login=%s, password_hash=%s)>' % (
-                self.username, self.email, self.image, self.last_login, self.password_hash)
+        return '<User(username=%s, email=%s, image=%s, last_login=%s, \
+                password_hash=%s)>' % (self.username, self.email, self.image, \
+                self.last_login, self.password_hash)
+
+    def record_login(self):
+        self.last_login = datetime.utcnow()
 
     def info(self) -> Dict:
         user = (('username', self.username),
@@ -57,10 +61,15 @@ class Token(Base):
     expiry = Column(DateTime, default=(datetime.utcnow() +
              timedelta(seconds=EXP_TIME)))
     user_ref = relationship('User', backref=backref('tokens',
-        cascade='all, delete-orphan', single_parent=True), lazy='joined', uselist=False)
+        cascade='all, delete-orphan', single_parent=True), lazy='joined', \
+                uselist=False)
 
     def __init__(self, user: User):
         self.user_ref = user
+
+    def __repr__(self) -> str:
+        return '<Token(id=%s, expiry=%s, user_ref=%s)>' % \
+                (self.id, self.expiry, self.user_ref.username)
 
     def __str__(self) -> str:
         return self.id
@@ -69,11 +78,6 @@ class Token(Base):
         token = (('token', self.id),
                  ('exp', self.expiry))
         return dict(token)
-
-    def is_valid(self) -> bool:
-        if self.expiry > datetime.utcnow():
-            return True
-        return False
 
     def refresh(self) -> None:
         self.expiry = datetime.utcnow() + timedelta(seconds=EXP_TIME)
