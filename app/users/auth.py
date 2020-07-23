@@ -3,13 +3,10 @@ from datetime import datetime
 from functools import wraps
 from typing import Tuple, Dict
 from flask import request
-from flask_restx import marshal
 from . import bcrypt
-from app.api import models
-import app.exceptions as exc
 from app.database import session_scope
 from app.database.interface import DAO
-import pdb
+import app.exceptions as exc
 
 def token_required(f):
     @wraps(f)
@@ -21,7 +18,7 @@ def token_required(f):
             else:
                 raise exc.AuthError('Token expired, login again to refresh.')
         except (exc.SessionError, exc.AuthError) as e:
-            return marshal(e.message(), models.message), 401
+            raise e
     return wrapper
 
 def hash_password(password: str) -> str:
